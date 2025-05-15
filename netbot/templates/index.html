@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NetBot</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="https://amadeus.com/content/dam/amadeus/images/en/icons/favicon/apple-touch-icon.png">
+  <style>
+    body.light { background-color: #f9fafb; color: #000000; }
+    body.dark { background-color: #1f2937; color: #f9fafb; }
+    .light .sidebar-bg { background-color: #f3f4f6; }
+    .dark .sidebar-bg { background-color: #111827; }
+    .light .header-footer-bg { background-color: #e5e7eb; border-color: #d1d5db; }
+    .dark .header-footer-bg { background-color: #1f2937; border-color: #374151; }
+    .light .chat-input-bg { background-color: #f3f4f6; color: #000000; }
+    .dark .chat-input-bg { background-color: #374151; color: #f9fafb; }
+    .light .bot-message-bg { background-color: #e5e7eb; color: #000000; }
+    .dark .bot-message-bg { background-color: #374151; }
+    .light .user-message-bg { background-color: #1db6d8; } /* Consider a text color for user messages in light mode if #1db6d8 makes white text hard to read */
+    .dark .user-message-bg { background-color: #1E40AF; } /* Ensures white text is readable */
+    #chat-input { min-height: 48px; overflow-y: hidden; }
+    #ip-display { padding: 8px 16px; font-size: 0.875rem; text-align: center; }
+    .light #ip-display { background-color: #f3f4f6; color: #374151; }
+    .dark #ip-display { background-color: #111827; color: #d1d5db; }
+    .logo { position: absolute; top: 10px; left: 65px; width: 120px; height: auto; z-index: 52; transition: transform 0.3s ease-in-out; }
+    @media (max-width: 768px) { .logo { left: 60px; width: 100px; } }
+    .hidden { display: none; }
+
+    /* Ensuring sidebar links have good contrast and hover effect in both themes */
+    .sidebar-link {
+        /* Default color will be inherited from body.light/body.dark */
+        padding-top: 0.5rem; /* Tailwind's py-2 equivalent */
+        padding-bottom: 0.5rem;
+        display: block;
+        border-radius: 0.375rem; /* Tailwind's rounded-md */
+        padding-left: 0.75rem; /* Tailwind's px-3 equivalent */
+        padding-right: 0.75rem;
+    }
+    .light .sidebar-link:hover { background-color: #d1d5db; /* Tailwind's hover:bg-gray-300 */ color: #111827; /* Ensuring text stays dark on hover */}
+    .dark .sidebar-link:hover { background-color: #374151; /* Tailwind's hover:bg-gray-700 */ color: #f9fafb; /* Ensuring text stays light on hover */ }
+
+  </style>
+</head>
+<body class="text-white h-screen flex overflow-hidden dark"> <div id="sidebar" class="fixed left-0 w-64 h-full sidebar-bg p-4 transform -translate-x-full transition-transform duration-300 ease-in-out z-50" style="top: 0;">
+      <h2 class="text-2xl font-semibold mb-4 mt-12" style="font-style: Geometric Sans-serif;">NetBot</h2>
+      <ul class="space-y-2">
+        <li><a href="#" class="sidebar-link">History</a></li>
+        <li><a href="#" class="sidebar-link">Settings</a></li>
+        <li><a href="{{ url_for('logout') }}" class="sidebar-link">Logout</a></li>
+        </ul>
+    </div>
+
+    <button onclick="toggleSidebar()" class="fixed top-3 left-4 focus:outline-none p-1 rounded-md hover:bg-gray-500 dark:hover:bg-gray-700" style="z-index: 51;">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+    </button>
+
+    <button id="theme-toggle" class="fixed top-3 right-4 p-1 rounded-md hover:bg-gray-500 dark:hover:bg-gray-700" style="z-index: 51;">
+        </button>
+
+    <div id="main-content" class="flex-1 flex flex-col h-full ml-0 transition-all duration-300 ease-in-out">
+      <header class="flex items-center justify-between header-footer-bg px-4 py-3 border-b">
+        <div class="flex items-center pl-9"><h1 class="text-xl font-bold" style="font-style: Geometric Sans-serif; font-size: 35px; margin-left: 50px;">amadeus</h1></div>
+        {% if username %}
+            <div class="text-sm mr-4" style="margin-right: 100px; font-size: 26px;">Welcome, <span class="font-semibold">{{ username }}</span>!</div>
+        {% endif %}
+      </header>
+
+      <div id="ip-display" class="header-footer-bg"></div>
+
+      <main class="flex-1 overflow-y-auto p-4 space-y-4" id="chat-messages"></main>
+
+      <footer class="p-4 border-t header-footer-bg">
+        <div id="file-staging-area" class="px-1 pb-2 text-sm hidden">
+          <span class="text-xs">File for YAML: </span>
+          <span id="staged-filename" class="font-semibold text-xs"></span>
+          <button type="button" id="clear-staged-file" class="ml-1 text-red-500 hover:text-red-700 text-xs focus:outline-none">(Clear)</button>
+        </div>
+        <form id="chat-form" class="flex space-x-2 items-end" method="POST" enctype="multipart/form-data">
+          <input type="file" name="textfile" id="yaml-file-input" accept=".txt" class="hidden">
+          <button type="button" id="trigger-yaml-select-button" title="Attach TXT for YAML generation"
+                  class="bg-gray-500 hover:bg-gray-600 text-white rounded-full h-12 w-12 flex items-center justify-center flex-shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          </button>
+          <textarea id="chat-input" name="message" placeholder="Type message or attach TXT for YAML..." rows="1"
+                    class="flex-1 p-2 rounded-lg chat-input-bg resize-none"></textarea>
+          <button type="submit" id="sendButton"
+                  class="bg-blue-700 hover:bg-blue-800 text-white rounded-full h-12 w-12 flex items-center justify-center flex-shrink-0"
+                  disabled>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
+        </form>
+      </footer>
+    </div>
+
+  <script>
+    // --- Sidebar and Theme Toggle Logic ---
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar'); 
+      const mainContent = document.getElementById('main-content'); 
+      const logo = document.querySelector('.logo'); 
+      
+      sidebar.classList.toggle('-translate-x-full');
+      
+      if (!sidebar.classList.contains('-translate-x-full')) { 
+        mainContent.classList.remove('ml-0'); 
+        mainContent.classList.add('ml-64'); 
+        if (logo) logo.style.transform = 'translateX(16rem)';
+      } else { 
+        mainContent.classList.remove('ml-64'); 
+        mainContent.classList.add('ml-0'); 
+        if (logo) logo.style.transform = 'translateX(0px)'; 
+      }
+    }
+    const themeToggleBtn = document.getElementById('theme-toggle'); 
+    const body = document.body;
+
+    function applyTheme(theme) { 
+      if (theme === 'light') { 
+        body.classList.add('light'); 
+        body.classList.remove('dark'); 
+        themeToggleBtn.textContent = '🌙'; 
+      } else { 
+        body.classList.add('dark'); 
+        body.classList.remove('light'); 
+        themeToggleBtn.textContent = '☀️'; 
+      } 
+    }
+    const savedTheme = localStorage.getItem('theme') || (body.classList.contains('dark') ? 'dark' : 'light'); 
+    applyTheme(savedTheme);
+
+    themeToggleBtn.addEventListener('click', () => { 
+      const isCurrentlyDark = body.classList.contains('dark');
+      const newTheme = isCurrentlyDark ? 'light' : 'dark';
+      applyTheme(newTheme);
+      localStorage.setItem('theme', newTheme); 
+    });
+
+    // --- Chat Functionality Elements ---
+    const chatInput = document.getElementById('chat-input');
+    const chatMessages = document.getElementById('chat-messages');
+    const sendButton = document.getElementById('sendButton');
+    const chatForm = document.getElementById('chat-form');
+    const ipDisplay = document.getElementById('ip-display');
+
+    // --- File Staging Elements ---
+    const triggerYamlSelectButton = document.getElementById('trigger-yaml-select-button');
+    const yamlFileInput = document.getElementById('yaml-file-input');
+    const fileStagingArea = document.getElementById('file-staging-area');
+    const stagedFilenameText = document.getElementById('staged-filename');
+    const clearStagedFileButton = document.getElementById('clear-staged-file');
+
+    function escapeHTML(str) {
+        if (typeof str !== 'string') return '';
+        return str.replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[m]));
+    }
+
+    function updateSendButtonState() {
+        const hasText = chatInput.value.trim().length > 0;
+        const hasFile = yamlFileInput.files.length > 0;
+        sendButton.disabled = !(hasText || hasFile);
+    }
+
+    function resetStagedFile() {
+        if (yamlFileInput) yamlFileInput.value = '';
+        if (fileStagingArea) fileStagingArea.classList.add('hidden');
+        if (stagedFilenameText) stagedFilenameText.textContent = '';
+        updateSendButtonState();
+    }
+
+    if (triggerYamlSelectButton && yamlFileInput) {
+        triggerYamlSelectButton.addEventListener('click', () => {
+            yamlFileInput.click();
+        });
+    }
+
+    if (yamlFileInput) {
+        yamlFileInput.addEventListener('change', () => {
+            if (yamlFileInput.files.length > 0) {
+                const file = yamlFileInput.files[0];
+                if (file.name.toLowerCase().endsWith('.txt')) {
+                    if (stagedFilenameText) stagedFilenameText.textContent = file.name;
+                    if (fileStagingArea) fileStagingArea.classList.remove('hidden');
+                } else {
+                    alert('Please select a valid .txt file.');
+                    resetStagedFile();
+                }
+            } else {
+                resetStagedFile(); 
+            }
+            updateSendButtonState();
+        });
+    }
+
+    if (clearStagedFileButton) {
+        clearStagedFileButton.addEventListener('click', () => {
+            resetStagedFile();
+        });
+    }
+    
+    chatInput.addEventListener('input', function () {
+      this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px';
+      updateSendButtonState();
+    });
+
+    chatInput.addEventListener('keypress', function (event) {
+        if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            if (!sendButton.disabled) { sendMessage(); }
+        }
+    });
+
+    chatForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!sendButton.disabled) { sendMessage(); }
+    });
+
+    async function sendMessage() {
+        const messageText = chatInput.value.trim();
+        const fileForYAML = yamlFileInput.files.length > 0 ? yamlFileInput.files[0] : null;
+
+        if (messageText === "" && !fileForYAML) return;
+
+        let displayedMessage = ""; // For constructing the message shown to the user
+
+        if (messageText) {
+            displayedMessage = escapeHTML(messageText);
+        }
+
+        if (fileForYAML) {
+            const fileInfoHTML = `<br><small class="text-xs opacity-75">(Attached for YAML: ${escapeHTML(fileForYAML.name)})</small>`;
+            if (displayedMessage) {
+                displayedMessage += fileInfoHTML;
+            } else {
+                // If only file is sent, create a message indicating that
+                displayedMessage = `<small class="text-xs">(File for YAML: ${escapeHTML(fileForYAML.name)})</small>`;
+            }
+        }
+        
+        if (displayedMessage) {
+            const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.classList.add('text-right', 'mb-2');
+            // The user-message-bg class should provide text color contrast or text should be explicitly white
+            userMessageDiv.innerHTML = `<div class="inline-block user-message-bg text-white p-3 rounded-2xl max-w-md">${displayedMessage}</div><div class="text-xs text-gray-400 mt-1 mr-1">${currentTime}</div>`;
+            chatMessages.appendChild(userMessageDiv);
+        }
+        
+        chatInput.value = ""; chatInput.style.height = 'auto';
+        const originalFileStagingText = stagedFilenameText.textContent; // Store before reset
+        resetStagedFile(); 
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        const typingDiv = document.createElement('div');
+        typingDiv.classList.add('text-left', 'mb-2');
+        typingDiv.innerHTML = `<div class="inline-block bot-message-bg p-3 rounded-2xl max-w-md" id="typing">Processing...</div>`;
+        chatMessages.appendChild(typingDiv); chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        const formData = new FormData();
+        // Only append message if it was actually typed, not just if file was attached
+        if (messageText) {
+            formData.append("message", messageText);
+        } else if (fileForYAML) {
+            // If only a file is sent, we might want to send a placeholder or specific instruction
+            // Or your backend might handle "message" not being present if a file is.
+            // For now, let's send an empty message if only file is there and message was empty.
+             formData.append("message", ""); // Or a specific placeholder like "[YAML File Attached]"
+        }
+
+        if (fileForYAML) { 
+            formData.append("textfile", fileForYAML); 
+        }
+
+
+        try {
+            const response = await fetch("{{ url_for('chat') }}", { method: "POST", body: formData }); // Use url_for for chat endpoint
+            if (!response.ok) {
+                let errorMsg = `HTTP error! status: ${response.status}`;
+                try { const errData = await response.json(); if(errData && errData.error) errorMsg = errData.error; } catch (e) { /* Ignore */ }
+                throw new Error(errorMsg);
+            }
+            typingDiv.remove();
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                const result = await response.json();
+                const botMessageDiv = document.createElement('div'); 
+                botMessageDiv.classList.add('text-left', 'mb-2');
+                const botResponseHTML = result.response ? escapeHTML(result.response).replace(/\n/g, '<br>') : "Error: " + escapeHTML(result.error || 'Unknown error');
+                botMessageDiv.innerHTML = `<div class="inline-block bot-message-bg p-3 rounded-2xl max-w-md">${botResponseHTML}</div><div class="text-xs text-gray-400 mt-1 ml-1">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
+                chatMessages.appendChild(botMessageDiv);
+                if (result.source_ip && result.destination_ip && result.source_ip !== "N/A" && result.destination_ip !== "N/A") { ipDisplay.innerHTML = `<p class="py-1">🔹 <b>Source IP:</b> ${escapeHTML(result.source_ip)} &nbsp;&nbsp; 🔹 <b>Destination IP:</b> ${escapeHTML(result.destination_ip)}</p>`; }
+                else {
+                    // Clear IP display if no new IPs are returned or they are N/A
+                    // Check if current content is not already empty to avoid unnecessary DOM manipulation
+                    if (ipDisplay.innerHTML.trim() !== "") {
+                         // ipDisplay.innerHTML = ""; // Or some default placeholder
+                    }
+                }
+            } else if (contentType && (contentType.includes("yaml") || contentType.includes("octet-stream") || contentType.includes("text/plain"))) { 
+                const blob = await response.blob(); const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.style.display = 'none'; a.href = downloadUrl;
+                let filename = originalFileStagingText ? originalFileStagingText.replace(/\.txt$/i, '.yaml') : 'generated.yaml'; // Use original filename for basis
+                const disposition = response.headers.get('Content-Disposition');
+                if (disposition && disposition.indexOf('attachment') !== -1) { const filenameRegex = /filename[^;=\n]*=(?:(['"]).*?\2|[^;\n]*)/; const matches = filenameRegex.exec(disposition); if (matches != null && matches[1]) { filename = matches[1].replace(/['"]/g, ''); } }
+                a.download = filename; document.body.appendChild(a); a.click();
+                window.URL.revokeObjectURL(downloadUrl); a.remove();
+                const botMessageDiv = document.createElement('div'); botMessageDiv.classList.add('text-left', 'mb-2');
+                botMessageDiv.innerHTML = `<div class="inline-block bot-message-bg p-3 rounded-2xl max-w-md">YAML file generated..</div><div class="text-xs text-gray-400 mt-1 ml-1">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
+                chatMessages.appendChild(botMessageDiv);
+            } else { throw new Error(`Unexpected response type: ${contentType || 'N/A'}`); }
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        } catch (error) {
+            console.error("Chat/File Upload error:", error);
+            const typingElement = document.getElementById("typing"); if(typingElement) typingElement.remove();
+            const errorDiv = document.createElement('div'); errorDiv.classList.add('text-left');
+            errorDiv.innerHTML = `<div class="inline-block bot-message-bg p-3 rounded-2xl max-w-md">Error: ${escapeHTML(error.message)}.</div><div class="text-xs text-gray-400 mt-1">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
+            chatMessages.appendChild(errorDiv); chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        updateSendButtonState(); 
+        const sidebar = document.getElementById('sidebar'); const logo = document.querySelector('.logo');
+        if (logo) { if (!sidebar.classList.contains('-translate-x-full')) { logo.style.transform = 'translateX(16rem)'; } else { logo.style.transform = 'translateX(0px)'; } }
+        // Set initial theme toggle icon based on applied theme
+        applyTheme(localStorage.getItem('theme') || (body.classList.contains('dark') ? 'dark' : 'light'));
+    });
+  </script>
+</body>
+</html>

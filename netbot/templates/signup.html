@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign Up - NetBot</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="https://amadeus.com/content/dam/amadeus/images/en/icons/favicon/apple-touch-icon.png">
+    <style>
+        /* Base styles matching index.html & login.html */
+        body.light { background-color: #f9fafb; /* bg-gray-50 */ color: #111827; /* text-gray-900 */ }
+        body.dark { background-color: #1f2937; /* bg-gray-800 */ color: #f9fafb; /* text-gray-50 */ }
+
+        /* Form card specific theme styles */
+        .light .form-card-bg { background-color: #ffffff; /* bg-white */ }
+        .dark .form-card-bg { background-color: #374151; /* bg-gray-700 */ }
+
+        .light .input-bg { background-color: #f3f4f6; /* bg-gray-100 */ color: #111827; border-color: #d1d5db; /* border-gray-300 */ }
+        .dark .input-bg { background-color: #4b5563; /* bg-gray-600 */ color: #f9fafb; border-color: #6b7280; /* border-gray-500 */ }
+        .dark .input-bg::placeholder { color: #9ca3af; /* placeholder-gray-400 */ }
+        .light .input-bg::placeholder { color: #6b7280; /* placeholder-gray-500 */ }
+
+        .light .link-text { color: #2563eb; /* text-blue-600 */ }
+        .dark .link-text { color: #60a5fa; /* text-blue-400 */ }
+        .light .link-text:hover { color: #1d4ed8; /* text-blue-700 */ }
+        .dark .link-text:hover { color: #93c5fd; /* text-blue-300 */ }
+
+        .light .heading-text { color: #111827; /* text-gray-900 */ }
+        .dark .heading-text { color: #f9fafb; /* text-gray-50 */ }
+
+        .light .label-text { color: #374151; /* text-gray-700 */}
+        .dark .label-text { color: #d1d5db; /* text-gray-300 */}
+
+        /* Use a common sans-serif font if "Geometric Sans-serif" is not available */
+        .font-geometric-sans {
+            font-family: "Geometric Sans-serif", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        }
+
+        /* Flash message styling */
+        .flash-success { background-color: #d1fae5; border-color: #6ee7b7; color: #065f46; } /* bg-green-100 border-green-300 text-green-700 */
+        .flash-danger { background-color: #fee2e2; border-color: #fca5a5; color: #991b1b; } /* bg-red-100 border-red-300 text-red-700 */
+        .flash-info { background-color: #dbeafe; border-color: #93c5fd; color: #1e40af; } /* bg-blue-100 border-blue-300 text-blue-700 */
+    </style>
+</head>
+<body class="h-screen flex flex-col items-center justify-center p-4">
+
+    <button id="theme-toggle" class="fixed top-4 right-4 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2">
+        </button>
+
+    <div class="w-full max-w-md">
+        <div class="text-center mb-6">
+            <h1 class="text-5xl font-bold heading-text font-geometric-sans">amadeus</h1>
+            <p class="text-lg heading-text mt-1 font-geometric-sans">Create NetBot Account</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="mb-4 space-y-2">
+              {% for category, message in messages %}
+                <div class="p-4 rounded-md border text-sm 
+                  {% if category == 'danger' %} flash-danger
+                  {% elif category == 'success' %} flash-success
+                  {% elif category == 'info' %} flash-info
+                  {% else %} bg-gray-100 border-gray-300 text-gray-800 dark:bg-gray-600 dark:border-gray-500 dark:text-gray-200
+                  {% endif %}" role="alert">
+                  {{ message }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+        <div class="form-card-bg shadow-xl rounded-lg p-8 sm:p-10">
+            <h2 class="text-2xl font-semibold heading-text text-center mb-6">Sign Up</h2>
+            <form method="post" action="{{ url_for('signup') }}">
+                <div class="mb-6">
+                    <label for="username" class="block mb-2 text-sm font-medium label-text">Username</label>
+                    <input type="text" name="username" id="username"
+                           class="input-bg border text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-3.5"
+                           placeholder="Choose a username" required>
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block mb-2 text-sm font-medium label-text">Password</label>
+                    <input type="password" name="password" id="password"
+                           class="input-bg border text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-3.5"
+                           placeholder="Create a password" required>
+                </div>
+                <button type="submit"
+                        class="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-3 text-center dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800">
+                    Create Account
+                </button>
+                <p class="text-sm font-light mt-6 text-center label-text">
+                    Already have an account? <a href="{{ url_for('login') }}" class="font-medium link-text hover:underline">Login here</a>
+                </p>
+            </form>
+        </div>
+         <div class="text-center mt-4">
+            <p class="text-xs label-text">&copy; <span id="currentYear"></span> Amadeus NetBot. All rights reserved.</p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const body = document.body;
+
+        function applyTheme(theme) {
+            if (theme === 'light') {
+                body.classList.add('light');
+                body.classList.remove('dark');
+                themeToggleBtn.innerHTML = '🌙 <span class="sr-only">Enable Dark Mode</span>';
+                themeToggleBtn.classList.remove('dark:hover:bg-gray-700', 'dark:focus:ring-gray-600');
+                themeToggleBtn.classList.add('hover:bg-gray-200', 'focus:ring-gray-300');
+
+            } else { // 'dark' or default
+                body.classList.add('dark');
+                body.classList.remove('light');
+                themeToggleBtn.innerHTML = '☀️ <span class="sr-only">Enable Light Mode</span>';
+                themeToggleBtn.classList.remove('hover:bg-gray-200', 'focus:ring-gray-300');
+                themeToggleBtn.classList.add('dark:hover:bg-gray-700', 'dark:focus:ring-gray-600');
+            }
+        }
+
+        const defaultUserTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        const savedTheme = localStorage.getItem('theme') || defaultUserTheme;
+        applyTheme(savedTheme);
+        // If body had a class from server-side rendering (unlikely for static template here but good practice)
+        // if (body.classList.contains('light')) applyTheme('light'); else if (body.classList.contains('dark')) applyTheme('dark');
+
+
+        themeToggleBtn.addEventListener('click', () => {
+            const isCurrentlyDark = body.classList.contains('dark');
+            const newTheme = isCurrentlyDark ? 'light' : 'dark';
+            applyTheme(newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+    </script>
+</body>
+</html>

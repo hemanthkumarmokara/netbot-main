@@ -1,0 +1,33 @@
+-   TR_NUMBER: '27000584'
+    Section:
+    -   device_type: juniper
+        list:
+        - AMSRTP630
+        command:
+            show_commands:
+            - show route receive-protocol bgp 57.235.2.18 table L3VPN-1AXSMSG-APH.inet.0
+                hidden | match 57.255.1.0/24
+            - show route receive-protocol bgp 57.235.2.18 table L3VPN-1AXSMSG-APH.inet.0
+                | match 57.255.1.0/24
+            - show route advertising-protocol bgp 57.235.2.18 table L3VPN-1AXSMSG-APH.inet.0
+                82.150.240.192
+    -   device_type: juniper
+        list:
+        - FRARTP637
+        command:
+            show_commands:
+            - show route receive-protocol bgp 171.17.31.46 table L3VPN-1AXSMSG-APH.inet.0
+                hidden | match 57.255.1.0/24
+            - show route receive-protocol bgp 171.17.31.46 table L3VPN-1AXSMSG-APH.inet.0
+                | match 57.255.1.0/24
+            - show route advertising-protocol bgp 171.17.31.46 table L3VPN-1AXSMSG-APH.inet.0
+                82.150.240.192
+    -   device_type: juniper
+        list:
+        - AMSRTP630
+        - FRARTP637
+        command:
+            implementation:
+            - set policy-options prefix-list PFX-1AXSMSG-APH-IN 57.255.1.0/24
+            reversion:
+            - delete policy-options prefix-list PFX-1AXSMSG-APH-IN 57.255.1.0/24
