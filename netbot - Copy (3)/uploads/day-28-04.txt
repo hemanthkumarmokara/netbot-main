@@ -1,0 +1,16 @@
+input:
+
+TR number:  27000584
+Routers: AMSRTP630,FRARTP637
+show commands:
+ BGP number:57.235.2.18
+ VRF name:L3VPN-1AXSMSG-APH
+ ------------
+implementation:
+
+prefix filter name:PFX-1AXSMSG-APH-IN
+prefix: 57.255.1.0/24
+
+reversion:
+
+

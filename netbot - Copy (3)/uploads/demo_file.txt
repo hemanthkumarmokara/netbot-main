@@ -1,0 +1,6 @@
+TR number: TR-001
+Routers: R1,R2
+BGP number: 172.16.10.1
+VRF name: vrf-blue
+prefix filter name: filter-tr001
+prefix: 10.1.1.0/24
